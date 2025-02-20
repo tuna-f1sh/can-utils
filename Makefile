@@ -43,13 +43,12 @@ PREFIX ?= /usr/local
 
 MAKEFLAGS := -k
 
-CFLAGS := -g -O0 -Wall -Wno-parentheses -Wsign-compare
+CFLAGS := -O2 -Wall -Wno-parentheses -Wsign-compare
 LDLIBS := -lexpat -lz -lmdflibrary -lstdc++
 
 HAVE_FORK := $(shell ./check_cc.sh "$(CC)" fork_test.c)
 
 CPPFLAGS += \
-	-g \
 	-I. \
 	-Iinclude \
 	-DAF_CAN=PF_CAN \

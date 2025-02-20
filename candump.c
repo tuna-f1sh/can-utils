@@ -335,11 +335,12 @@ int main(int argc, char **argv)
 	struct ifreq ifr;
 	struct timeval tv, last_tv;
 	int timeout_ms = -1; /* default to no timeout */
-	FILE *logfile = NULL;
+	Mdf4FileHandle logfile = NULL;
 	char fname[83]; /* suggested by -Wformat-overflow= */
 	const char *logname = NULL;
 	static char afrbuf[AFRSZ]; /* ASCII CAN frame buffer size */
 	static int alen;
+	struct Message m;
 
 	signal(SIGTERM, sigterm);
 	signal(SIGHUP, sigterm);
@@ -714,8 +715,8 @@ int main(int argc, char **argv)
 
 		fprintf(stderr, "Enabling Logfile '%s'\n", logname);
 
-		logfile = mdf4_canlog_create(logname, get_current_time_in_ticks());
-		if (!logfile) {
+		logfile = mdf4_canlog_create(logname);
+		if (logfile == NULL) {
 			perror("logfile");
 			return 1;
 		}
@@ -854,10 +855,11 @@ int main(int argc, char **argv)
 
 			/* write CAN frame in log file style to logfile */
 			if (log) {
-				struct Message m;
-				m.timestamp = tv.tv_sec * 1000000 + tv.tv_usec;
+				memset(&m, 0, sizeof(m));
+				m.timestamp = (uint64_t)tv.tv_sec * 1000000000ULL + (uint64_t)tv.tv_usec * 1000;
 				m.id = cu.fd.can_id;
 				m.dlc = cu.fd.len;
+				m.channel = 1;
 				if (mdf4_canlog_write(logfile, &m) < 0) {
 					perror("logfile write");
 					return 1;
