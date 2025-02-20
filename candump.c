@@ -67,6 +67,7 @@
 
 #include "terminal.h"
 #include "lib.h"
+#include "mdflib_c_wrapper.h"
 
 /* for hardware timestamps - since Linux 2.6.30 */
 #ifndef SO_TIMESTAMPING
@@ -119,6 +120,16 @@ extern int optind, opterr, optopt;
 
 static volatile int running = 1;
 static volatile sig_atomic_t signal_num;
+
+uint64_t get_current_time_in_ticks(void) {
+    // Use CLOCK_REALTIME or CLOCK_MONOTONIC, depending on your requirements
+    struct timespec ts;
+    clock_gettime(CLOCK_REALTIME, &ts);
+
+    // Convert to a 64-bit nanosecond timestamp
+    uint64_t ticks = (uint64_t)ts.tv_sec * 1000000000ULL + (uint64_t)ts.tv_nsec;
+    return ticks;
+}
 
 static void print_usage(void)
 {
@@ -687,7 +698,7 @@ int main(int argc, char **argv)
 
 			localtime_r(&currtime, &now);
 
-			snprintf(fname, sizeof(fname), "candump-%04d-%02d-%02d_%02d%02d%02d.log",
+			snprintf(fname, sizeof(fname), "candump-%04d-%02d-%02d_%02d%02d%02d.mf4",
 				now.tm_year + 1900,
 				now.tm_mon + 1,
 				now.tm_mday,
@@ -703,7 +714,7 @@ int main(int argc, char **argv)
 
 		fprintf(stderr, "Enabling Logfile '%s'\n", logname);
 
-		logfile = fopen(logname, "w");
+		logfile = mdf4_canlog_create(logname, get_current_time_in_ticks());
 		if (!logfile) {
 			perror("logfile");
 			return 1;
@@ -810,9 +821,10 @@ int main(int argc, char **argv)
 					printf("DROPCOUNT: dropped %u CAN frame%s on '%s' socket (total drops %u)\n",
 					       frames, (frames > 1)?"s":"", devname[idx], obj->dropcnt);
 
-				if (log)
-					fprintf(logfile, "DROPCOUNT: dropped %u CAN frame%s on '%s' socket (total drops %u)\n",
-						frames, (frames > 1)?"s":"", devname[idx], obj->dropcnt);
+				/* TODO error frame */
+				/*if (log)*/
+				/*	fprintf(logfile, "DROPCOUNT: dropped %u CAN frame%s on '%s' socket (total drops %u)\n",*/
+				/*		frames, (frames > 1)?"s":"", devname[idx], obj->dropcnt);*/
 
 				obj->last_dropcnt = obj->dropcnt;
 			}
@@ -841,8 +853,16 @@ int main(int argc, char **argv)
 			}
 
 			/* write CAN frame in log file style to logfile */
-			if (log)
-				fprintf(logfile, "%s%s\n", afrbuf, extra_info);
+			if (log) {
+				struct Message m;
+				m.timestamp = tv.tv_sec * 1000000 + tv.tv_usec;
+				m.id = cu.fd.can_id;
+				m.dlc = cu.fd.len;
+				if (mdf4_canlog_write(logfile, &m) < 0) {
+					perror("logfile write");
+					return 1;
+				}
+			}
 
 			/* print CAN frame in log file style to stdout */
 			if ((logfrmt) && (silent == SILENT_OFF)) {
@@ -897,7 +917,7 @@ out_fflush:
 	close(fd_epoll);
 
 	if (log)
-		fclose(logfile);
+		mdf4_canlog_close(logfile, get_current_time_in_ticks());
 
 	if (signal_num)
 		return 128 + signal_num;

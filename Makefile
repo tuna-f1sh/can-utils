@@ -43,11 +43,13 @@ PREFIX ?= /usr/local
 
 MAKEFLAGS := -k
 
-CFLAGS := -O2 -Wall -Wno-parentheses -Wsign-compare
+CFLAGS := -g -O0 -Wall -Wno-parentheses -Wsign-compare
+LDLIBS := -lexpat -lz -lmdflibrary -lstdc++
 
 HAVE_FORK := $(shell ./check_cc.sh "$(CC)" fork_test.c)
 
 CPPFLAGS += \
+	-g \
 	-I. \
 	-Iinclude \
 	-DAF_CAN=PF_CAN \
@@ -58,7 +60,7 @@ CPPFLAGS += \
 	-DSO_TXTIME=61 \
 	-DSCM_TXTIME=SO_TXTIME \
 	-D_FILE_OFFSET_BITS=64 \
-	-D_GNU_SOURCE
+	-D_GNU_SOURCE \
 
 PROGRAMS_CANGW := \
 	cangw
@@ -154,10 +156,11 @@ isobusfs_c.o:	lib.h libj1939.h
 j1939_timedate_srv.o: lib.h libj1939.h
 j1939_timedate_cli.o: lib.h libj1939.h
 canframelen.o:  canframelen.h
+mdflib_c_wrapper.o: mdflib_c_wrapper.h
 
 asc2log:	asc2log.o	lib.o
 canbusload:	canbusload.o	canframelen.o
-candump:	candump.o	lib.o
+candump:	candump.o	lib.o	mdflib_c_wrapper.o
 cangen:		cangen.o	lib.o
 canlogserver:	canlogserver.o	lib.o
 canplayer:	canplayer.o	lib.o

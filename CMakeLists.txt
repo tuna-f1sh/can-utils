@@ -34,6 +34,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DSCM_TXTIME=SO_TXTIME")
 
 include_directories (.)
 include_directories (./include)
+include_directories (./include/mdflibrary/)
 
 check_function_exists(fork HAVE_FORK)
 
