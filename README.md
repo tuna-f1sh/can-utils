@@ -2,6 +2,16 @@
 <img src="https://github.com/linux-can/can-logos/raw/master/png/SocketCAN-logo-60dpi.png" alt="SocketCAN logo"/>
 </p>
 
+# Fork of candump to log mf4 with mdflib
+
+1. Install [mdflib](https://github.com/ihedvall/mdflib)
+    * `cmake . -B build -DCMAKE_INSTALL_PREFIX:PATH=/usr`
+    * `cd build && make && sudo make install`
+2. Build candump
+    * `make candump`
+
+Run as normal. Log file will be mf4 rather than ascii text. Support multiple interfaces - will be recorded in same file using the channel field in the record.
+
 ### SocketCAN userspace utilities and tools
 
 This repository contains some userspace utilities for Linux CAN
