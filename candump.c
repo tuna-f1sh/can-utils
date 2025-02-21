@@ -859,7 +859,8 @@ int main(int argc, char **argv)
 				m.timestamp = (uint64_t)tv.tv_sec * 1000000000ULL + (uint64_t)tv.tv_usec * 1000;
 				m.id = cu.fd.can_id;
 				m.dlc = cu.fd.len;
-				m.channel = idx;
+				/* mdf files normally start at can channel 1 */
+				m.channel = idx + 1;
 				if (mdf4_canlog_write(logfile, &m) < 0) {
 					perror("logfile write");
 					return 1;
