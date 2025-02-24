@@ -6,56 +6,64 @@
 
 #include "mdflib_c_wrapper.h"
 
-#pragma region C
+#pragma region C++
 
-#include <mdflibrary/MdfExport.h>
-using namespace MdfLibrary;
-using namespace MdfLibrary::ExportFunctions;
+#include "mdf/mdffactory.h"
+#include "mdf/mdfwriter.h"
+#include "mdf/ifilehistory.h"
+#include "mdf/idatagroup.h"
+#include "mdf/canmessage.h"
+using namespace mdf;
 
 Mdf4FileHandle mdf4_canlog_create(const char* filepath) {
-	auto* Writer = MdfWriterInit(MdfWriterType::MdfBusLogger, filepath);
-	auto* Header = MdfWriterGetHeader(Writer);
-	MdfHeaderSetAuthor(Header, "Specialized Bicycle Components");
-	MdfHeaderSetDepartment(Header, "TURBO Future");
-	MdfHeaderSetDescription(Header, "SBC-CAN candump log");
-	MdfHeaderSetProject(Header, "Yutu Logger");
-	auto* History = MdfHeaderCreateFileHistory(Header);
-	MdfFileHistorySetDescription(History, "SBC-CAN candump log");
-	MdfFileHistorySetToolName(History, "candump sbc fork");
-	MdfFileHistorySetToolVendor(History, "Specialized Europe GmbH");
-	MdfFileHistorySetToolVersion(History, "1.0");
-	MdfFileHistorySetUserName(History, "John Whittington");
+	auto* writer = MdfFactory::CreateMdfWriterEx(MdfWriterType::MdfBusLogger);
+	writer->Init(filepath);
+	auto* header = writer->Header();
+	header->Author("Specialized Bicycle Components");
+	header->Department("TURBO Future");
+	header->Description("SBC-CAN candump log");
+	header->Project("Yutu Logger");
+	auto* history = header->CreateFileHistory();
+	history->Description("SBC-CAN candump log");
+	history->ToolName("candump sbc fork");
+	history->ToolVendor("Specialized Europe GmbH");
+	history->ToolVersion("1.0");
+	history->UserName("John Whittington");
 
-	MdfWriterSetBusType(Writer, MdfBusType::CAN);
-	MdfWriterSetStorageType(Writer, MdfStorageType::MlsdStorage);
-	MdfWriterSetMaxLength(Writer, 8);
-	if (!MdfWriterCreateBusLogConfiguration(Writer)) {
+	writer->BusType(MdfBusType::CAN);
+	writer->StorageType(MdfStorageType::MlsdStorage);
+	writer->MaxLength(8);
+
+	if (!writer->CreateBusLogConfiguration()) {
 		fprintf(stderr, "Failed to create bus log configuration\n");
 		return nullptr;
 	}
-	MdfWriterSetPreTrigTime(Writer, 0.0);
-	MdfWriterSetCompressData(Writer, false);
 
-	if (!MdfWriterInitMeasurement(Writer)) {
+	writer->PreTrigTime(0.0);
+	writer->CompressData(false);
+
+	if (!writer->InitMeasurement()) {
 		fprintf(stderr, "Failed to init measurement\n");
 		return nullptr;
 	}
 
-	return (Mdf4FileHandle) Writer;
+	return (Mdf4FileHandle) writer;
 }
 
 int mdf4_canlog_write(Mdf4FileHandle handle, struct Message* message) {
 	auto* writer = (mdf::MdfWriter*) handle;
-	auto* header = MdfWriterGetHeader(writer);
-	auto* last_dg = MdfHeaderGetLastDataGroup(header);
+	/*auto* header = MdfWriterGetHeader(writer);*/
+	/*auto* last_dg = MdfHeaderGetLastDataGroup(header);*/
+	auto* header = writer->Header();
+	auto* last_dg = header->LastDataGroup();
 	mdf::IChannelGroup* can_data_frame;
 
 	if (message->id & CAN_RTR_FLAG) {
-		can_data_frame = MdfDataGroupGetChannelGroupByName(last_dg, "CAN_RemoteFrame");
+		can_data_frame = last_dg->GetChannelGroup("CAN_RemoteFrame");
 	} else if (message->id & CAN_ERR_FLAG) {
-		can_data_frame = MdfDataGroupGetChannelGroupByName(last_dg, "CAN_ErrorFrame");
+		can_data_frame = last_dg->GetChannelGroup("CAN_ErrorFrame");
 	} else {
-		can_data_frame = MdfDataGroupGetChannelGroupByName(last_dg, "CAN_DataFrame");
+		can_data_frame = last_dg->GetChannelGroup("CAN_DataFrame");
 	}
 
 	if (can_data_frame == nullptr) {
@@ -63,25 +71,26 @@ int mdf4_canlog_write(Mdf4FileHandle handle, struct Message* message) {
 		return -1;
 	}
 
-	auto* msg = CanMessageInit();
-	CanMessageSetMessageId(msg, message->id & CAN_EFF_MASK);
-	CanMessageSetExtendedId(msg, message->id & CAN_EFF_FLAG);
-	CanMessageSetBusChannel(msg, message->channel);
-	CanMessageSetDataBytes(msg, message->data, message->dlc);
+	CanMessage msg;
+	msg.MessageId(message->id & CAN_EFF_MASK);
+	msg.ExtendedId(message->id & CAN_EFF_FLAG);
+	msg.BusChannel(message->channel);
+	msg.DataBytes(std::vector<uint8_t>(message->data, message->data + message->dlc));
 
-	if (MdfWriterGetStartTime(writer) == 0) {
-		MdfWriterStartMeasurement(writer, message->timestamp);
+	if (writer->StartTime() == 0) {
+		writer->StartMeasurement(message->timestamp);
 	}
 
-	MdfWriterSaveCanMessage(writer, can_data_frame, message->timestamp, msg);
+
+	writer->SaveCanMessage(*can_data_frame, message->timestamp, msg);
 
 	return 0;
 }
 
 int mdf4_canlog_close(Mdf4FileHandle handle, uint64_t tick_time) {
 	auto* writer = (mdf::MdfWriter*) handle;
-	MdfWriterStopMeasurement(writer, tick_time);
-	MdfWriterFinalizeMeasurement(writer);
+	writer->StopMeasurement(tick_time);
+	writer->FinalizeMeasurement();
 
 	return 0;
 }
