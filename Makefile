@@ -44,7 +44,7 @@ PREFIX ?= /usr/local
 MAKEFLAGS := -k
 
 CFLAGS := -O2 -Wall -Wno-parentheses -Wsign-compare
-LDLIBS := -lexpat -lz -lmdf -lstdc++
+LDLIBS := -lmdf -lstdc++ -lm -lexpat -lz
 
 HAVE_FORK := $(shell ./check_cc.sh "$(CC)" fork_test.c)
 
