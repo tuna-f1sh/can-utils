@@ -22,6 +22,7 @@ struct Message {
 Mdf4FileHandle mdf4_canlog_create(const char* filepath);
 int mdf4_canlog_close(Mdf4FileHandle handle, uint64_t tick_time);
 int mdf4_canlog_write(Mdf4FileHandle handle, struct Message* message);
+int mdf4_canlog_set_meta(Mdf4FileHandle handle, const char* key, const char* value);
 
 #ifdef __cplusplus
 }

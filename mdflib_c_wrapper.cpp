@@ -21,7 +21,6 @@ Mdf4FileHandle mdf4_canlog_create(const char* filepath) {
 	auto* header = writer->Header();
 	header->Author("Specialized Bicycle Components");
 	header->Department("TURBO Future");
-	header->Description("SBC-CAN candump log");
 	header->Project("Yutu Logger");
 	auto* history = header->CreateFileHistory();
 	history->Description("SBC-CAN candump log");
@@ -50,10 +49,15 @@ Mdf4FileHandle mdf4_canlog_create(const char* filepath) {
 	return (Mdf4FileHandle) writer;
 }
 
+int mdf4_canlog_set_meta(Mdf4FileHandle handle, const char* key, const char* value) {
+  auto* writer = (mdf::MdfWriter*) handle;
+  auto* meta = writer->Header()->CreateMetaData();
+  meta->StringProperty(key, value);
+  return 0;
+}
+
 int mdf4_canlog_write(Mdf4FileHandle handle, struct Message* message) {
 	auto* writer = (mdf::MdfWriter*) handle;
-	/*auto* header = MdfWriterGetHeader(writer);*/
-	/*auto* last_dg = MdfHeaderGetLastDataGroup(header);*/
 	auto* header = writer->Header();
 	auto* last_dg = header->LastDataGroup();
 	mdf::IChannelGroup* can_data_frame;
