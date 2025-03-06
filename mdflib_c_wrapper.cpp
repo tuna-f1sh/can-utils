@@ -49,11 +49,32 @@ Mdf4FileHandle mdf4_canlog_create(const char* filepath) {
 	return (Mdf4FileHandle) writer;
 }
 
-int mdf4_canlog_set_meta(Mdf4FileHandle handle, const char* key, const char* value) {
-  auto* writer = (mdf::MdfWriter*) handle;
-  auto* meta = writer->Header()->CreateMetaData();
-  meta->StringProperty(key, value);
-  return 0;
+int mdf4_canlog_set_meta_value(Mdf4FileHandle handle, const char* key, const char* value) {
+	auto* writer = (mdf::MdfWriter*) handle;
+	auto* header = writer->Header();
+	auto* meta = header->MetaData();
+	ETag etag;
+	etag.Name(key);
+	etag.DataType(ETagDataType::StringType);
+	etag.Value(value);
+	meta->CommonProperty(etag);
+	return 0;
+}
+
+int mdf4_canlog_set_tree_value(Mdf4FileHandle handle, const char* tree, const char* key, const char* value) {
+	auto* writer = (mdf::MdfWriter*) handle;
+	auto* header = writer->Header();
+	auto* meta = header->MetaData();
+	auto etag_tree = meta->CommonProperty(tree);
+	// set it in case it didn't exist
+	etag_tree.Name(tree);
+	ETag etag;
+	etag.Name(key);
+	etag.DataType(ETagDataType::StringType);
+	etag.Value(value);
+	etag_tree.AddTag(etag);
+	meta->CommonProperty(etag_tree);
+	return 0;
 }
 
 int mdf4_canlog_write(Mdf4FileHandle handle, struct Message* message) {
