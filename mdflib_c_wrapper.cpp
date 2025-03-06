@@ -6,8 +6,6 @@
 
 #include "mdflib_c_wrapper.h"
 
-#pragma region C++
-
 #include "mdf/mdffactory.h"
 #include "mdf/mdfwriter.h"
 #include "mdf/ifilehistory.h"
@@ -19,15 +17,10 @@ Mdf4FileHandle mdf4_canlog_create(const char* filepath) {
 	auto* writer = MdfFactory::CreateMdfWriterEx(MdfWriterType::MdfBusLogger);
 	writer->Init(filepath);
 	auto* header = writer->Header();
-	header->Author("Specialized Bicycle Components");
-	header->Department("TURBO Future");
-	header->Project("Yutu Logger");
 	auto* history = header->CreateFileHistory();
-	history->Description("SBC-CAN candump log");
-	history->ToolName("candump sbc fork");
-	history->ToolVendor("Specialized Europe GmbH");
+	history->Description("candump log");
+	history->ToolName("candump");
 	history->ToolVersion("1.0");
-	history->UserName("John Whittington");
 
 	writer->BusType(MdfBusType::CAN);
 	writer->StorageType(MdfStorageType::MlsdStorage);
@@ -119,5 +112,3 @@ int mdf4_canlog_close(Mdf4FileHandle handle, uint64_t tick_time) {
 
 	return 0;
 }
-
-#pragma endregion
